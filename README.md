@@ -28,3 +28,25 @@ Note that stock Armbian for the Cubieboard2 *will* work, but without this only t
 # Issues
 
 Everything should work, but RTL8188EU WiFi driver seems to be unstable (when there's no traffic it disconnects). If you keep pinging your router then it should be okay though (e.g. leave `ping 192.168.1.1` running on another terminal).
+
+# Misc
+
+To enable the watchdog timer (e..g to reboot when things freeze or the network goes down), do the following:
+
+1. Install the watchdog service with `sudo apt install watchdog`
+1. Edit `/etc/default/watchdog` and make sure `run_watchdog=1`
+1. Edit `/etc/watchdog.conf` and:
+    1. Uncomment `watchdog-device = /dev/watchdog`
+    1. Set `watchdog-timeout = 12` (or something <= 16 due to [hardware limitations](https://github.com/torvalds/linux/blob/master/drivers/watchdog/sunxi_wdt.c#L67))
+    1. Set `priority = 1` (**important** to [avoid](https://forum.armbian.com/topic/2898-how-to-install-enable-and-start-watchdog-in-h3/?do=findComment&comment=78858) the `cannot set scheduler (errno = 1 = 'Operation not permitted')` error)
+    1. Configure the criteria at the bottom of the file (e.g. `ping` or `max-load`)
+1. Enable and start the service
+    ```
+    sudo systemctl enable watchdog
+    sudo systemctl start watchdog 
+    ```
+1. Check if it's running: `sudo service watchdog status`
+
+References:
+* https://docs.jethome.ru/en/controllers/linux/howto/watchdog.html
+* https://www.supertechcrew.com/watchdog-keeping-system-always-running/ 
