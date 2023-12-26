@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Maxime Ripard
+ * Copyright 2013 Maxime Ripard
  *
  * Maxime Ripard <maxime.ripard@free-electrons.com>
  *
@@ -60,6 +60,46 @@
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
+
+	hdmi-connector {
+		compatible = "hdmi-connector";
+		type = "a";
+
+		port {
+			hdmi_con_in: endpoint {
+				remote-endpoint = <&hdmi_out_con>;
+			};
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		// MiniX-A20 mod: added
+		led-0 {
+			label = "blue";
+			gpios = <&pio 7 20 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+	};
+};
+
+// MiniX-A20 mod: not needed
+/*&ahci {
+	target-supply = <&reg_ahci_5v>;
+	status = "okay";
+};*/
+
+&codec {
+	status = "okay";
+};
+
+&cpu0 {
+	cpu-supply = <&reg_dcdc2>;
+};
+
+&de {
+	status = "okay";
 };
 
 &ehci0 {
@@ -70,47 +110,60 @@
 	status = "okay";
 };
 
-&i2c0 {
+// MiniX-A20 mod: no pysical ethernet
+/*&gmac {
 	pinctrl-names = "default";
-	pinctrl-0 = <&i2c0_pins_a>;
+	pinctrl-0 = <&gmac_mii_pins>;
+	phy-handle = <&phy1>;
+	phy-mode = "mii";
+	status = "okay";
+};*/
+
+&hdmi {
+	status = "okay";
+};
+
+&hdmi_out {
+	hdmi_out_con: endpoint {
+		remote-endpoint = <&hdmi_con_in>;
+	};
+};
+
+&i2c0 {
 	status = "okay";
 
 	axp209: pmic@34 {
-		compatible = "x-powers,axp209";
 		reg = <0x34>;
-		interrupts = <0>;
-
-		interrupt-controller;
-		#interrupt-cells = <1>;
+		interrupt-parent = <&nmi_intc>;
+		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
 	};
+};
+
+&i2c1 {
+	status = "okay";
 };
 
 &ir0 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&ir0_rx_pins_a>;
+	pinctrl-0 = <&ir0_rx_pin>;
 	status = "okay";
-};
-
-&ir0_rx_pins_a {
-	/* The ir receiver is not always populated */
-	bias-pull-up;
 };
 
 &mmc0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&mmc0_pins_a>;
 	vmmc-supply = <&reg_vcc3v3>;
 	bus-width = <4>;
-	cd-gpios = <&pio 7 1 GPIO_ACTIVE_HIGH>; /* PH1 */
-	cd-inverted;
+	cd-gpios = <&pio 7 1 GPIO_ACTIVE_LOW>; /* PH1 */
 	status = "okay";
 };
+
+// MiniX-A20 mod: no physical ethernet
+/*&gmac_mdio {
+	phy1: ethernet-phy@1 {
+		reg = <1>;
+	};
+};*/
 
 &ohci0 {
-	status = "okay";
-};
-
-&codec {
 	status = "okay";
 };
 
@@ -122,8 +175,44 @@
 	status = "okay";
 };
 
+// MiniX-A20 mod: not needed
+/*&reg_ahci_5v {
+	status = "okay";
+};*/
+
+#include "axp209.dtsi"
+
+&ac_power_supply {
+	status = "okay";
+};
+
+&reg_dcdc2 {
+	regulator-always-on;
+	regulator-min-microvolt = <1000000>;
+	regulator-max-microvolt = <1450000>;
+	regulator-name = "vdd-cpu";
+};
+
+&reg_dcdc3 {
+	regulator-always-on;
+	regulator-min-microvolt = <1000000>;
+	regulator-max-microvolt = <1400000>;
+	regulator-name = "vdd-int-dll";
+};
+
+&reg_ldo1 {
+	regulator-name = "vdd-rtc";
+};
+
+&reg_ldo2 {
+	regulator-always-on;
+	regulator-min-microvolt = <3000000>;
+	regulator-max-microvolt = <3000000>;
+	regulator-name = "avcc";
+};
+
+// MiniX-A20 mod: added
 &reg_usb0_vbus {
-	regulator-boot-on;
 	status = "okay";
 };
 
@@ -137,17 +226,23 @@
 
 &uart0 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&uart0_pins_a>;
+	pinctrl-0 = <&uart0_pb_pins>;
 	status = "okay";
 };
 
 &usb_otg {
+	// MiniX-A20 mod: changed to host mode from otg
 	dr_mode = "host";
+
 	status = "okay";
 };
 
 &usbphy {
+	// MiniX-A20 mod: added
+	usb0_id_det-gpios = <&pio 7 4 GPIO_ACTIVE_HIGH>; /* PH4 */
+	usb0_vbus_det-gpios = <&pio 7 5 GPIO_ACTIVE_HIGH>; /* PH5 */
 	usb0_vbus-supply = <&reg_usb0_vbus>;
+
 	usb1_vbus-supply = <&reg_usb1_vbus>;
 	usb2_vbus-supply = <&reg_usb2_vbus>;
 	status = "okay";
