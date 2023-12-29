@@ -1,8 +1,8 @@
 # Armbian installation guide for Mini-X clones based on the Allwinner A20 SoC
 
-[These devices](http://linux-sunxi.org/Pineriver_H24) are pretty old and fairly unpopular, but they're supported by Armbian and the latest mainline Linux kernel. See repo for case and board photos of my particular device.
+[These devices](http://linux-sunxi.org/Pineriver_H24) are pretty old and fairly unpopular, but they're supported by Armbian and the latest mainline Linux kernel with minimal issues. Stock Armbian for the Cubieboard 2 will work fairly well, but the device tree needs to be modified to fix a few things, like enabling the second USB port, the LED and disabling some missing hardware.
 
-Stock Armbian for the Cubieboard 2 will work fairly well, but the device tree needs to be modified to fix a few things, like enabling the second USB port, the LED and disabling some missing hardware.
+My particular device is a generic clone with "XMD_A20_V1.1" and date 2013.09.10 on the board. See repo for case and board photos.
 
 # Guide
 
@@ -14,16 +14,18 @@ Stock Armbian for the Cubieboard 2 will work fairly well, but the device tree ne
     ```
 1. Edit `armbian_first_run.txt` and set `FR_net_wifi_enabled=1` and `FR_net_wifi_ssid` and `FR_net_wifi_key` appropriately
 1. Unmount the SD card, place in your device and wait for it to show up on your network
-1. Log in with `root`/`1234` and create a new account
+1. Log in via SSH with `root`/`1234` and create a new account
 1. Install the modified DTB file from this repo and configure Armbian
     ```
     cd /tmp
     wget https://github.com/roger-/minixplus/raw/master/sun7i-a20-mini-xplus.dtb
     sudo cp sun7i-a20-mini-xplus.dtb /boot/dtb/
-    sudo echo "fdtfile=sun7i-a20-mini-xplus.dtb" >> armbianEnv.txt
+    sudo bash -c "echo fdtfile=sun7i-a20-mini-xplus.dtb >> armbianEnv.txt"
     ```
 1. Reboot
-   
+
+You can also login with a keyboard and HDMI display and manually setup the WiFi.
+
 # Notes
 
 * The DTS file is based on the sun4i-a10-mini-xplus.dts and [sun7i-a20-mk808c.dts](https://github.com/torvalds/linux/blob/master/arch/arm/boot/dts/allwinner/sun7i-a20-mk808c.dts) from the mainline kernel, with some modifications. 
@@ -34,8 +36,8 @@ cp sun7i-a20-mini-xplus.dts arch/arm/boot/dts/
 cpp -nostdinc -I include -I arch  -undef -x assembler-with-cpp  arch/arm/boot/dts/sun7i-a20-mini-xplus.dts dts.tmp
 dtc -I dts -O dtb -o sun7i-a20-mini-xplus.dtb dts.tmp
 ```
-* My board has XMD_A20_V1.1 written on it, with a date of 2013.09.10. 
 * Cubian for the Cubieboard2 also works, but is outdated (you'll have to use a custom fex file to get the USB port working). It does support NAND installation though.
+* Recent ArchLinux ARM versions don't seem to work (no HDMI output). Messing with the boot.scr file seems to be necessary.
 
 # Issues
 
