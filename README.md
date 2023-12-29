@@ -22,7 +22,9 @@ My particular device is a generic clone with "XMD_A20_V1.1" and date 2013.09.10 
     sudo cp sun7i-a20-mini-xplus.dtb /boot/dtb/
     sudo bash -c "echo fdtfile=sun7i-a20-mini-xplus.dtb >> armbianEnv.txt"
     ```
-1. Reboot
+1. Disable unnecessary hardware features by copying `etc/modprobe.d/sunxi.conf` to `etc/modprobe.d/` ([reduces system load](https://forum.armbian.com/topic/7575-k-worker-problem-on-a20-based-boards/))
+2. (Optional -- see below) Build a new r8188eu WiFI drive (reduces system load further and improves WiFi stability) 
+3. Reboot
 
 You can also login with a keyboard and HDMI display and manually setup the WiFi.
 
