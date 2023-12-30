@@ -80,7 +80,9 @@ sudo umount -lf sdcard/
 sudo umount sdcard
 ```
 
-Then boot from the SD card and compile and install the driver. Make sure to blacklist the old driver.
+Then boot from the SD card and compile and install the driver. Make sure to blacklist the old driver. 
+
+A binary for kernel 6.1.63 in included in the repo. Install to `/lib/modules/$(KVER)/kernel/drivers/net/wireless/`.
 
 # Watchdog timer
 
