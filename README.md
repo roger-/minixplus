@@ -6,27 +6,39 @@ My particular device is a generic clone with "XMD_A20_V1.1" and date 2013.09.10 
 
 # Guide
 
+## Base headless installation
+
+Run the following as root (`su root`):
+
 1. Install the latest [Armbian for Cubieboard 2](https://www.armbian.com/cubieboard-2/) on a micro SD card
 1. Mount the card on a Linux machine and create a first run template (needed to have WiFi connect on a headless install)
     ```
     cd <mount directory>/boot/
-    sudo cp armbian_first_run.txt.template armbian_first_run.txt
+    cp armbian_first_run.txt.template armbian_first_run.txt
     ```
 1. Edit `armbian_first_run.txt` and set `FR_net_wifi_enabled=1` and `FR_net_wifi_ssid` and `FR_net_wifi_key` appropriately
 1. Unmount the SD card, place in your device and wait for it to show up on your network
 1. Log in via SSH with `root`/`1234` and create a new account
+
+You can also login with a keyboard and HDMI display and manually setup the WiFi. Note that if your WiFi doesn't work then you may have to install an alternate driver.
+
+## Tweaks
+
+Run the following on your device as root:
+
 1. Install the modified DTB file from this repo and configure Armbian
     ```
     cd /tmp
     wget https://github.com/roger-/minixplus/raw/master/sun7i-a20-mini-xplus.dtb
-    sudo cp sun7i-a20-mini-xplus.dtb /boot/dtb/
-    sudo bash -c "echo fdtfile=sun7i-a20-mini-xplus.dtb >> armbianEnv.txt"
+    cp sun7i-a20-mini-xplus.dtb /boot/dtb/
+    echo fdtfile=sun7i-a20-mini-xplus.dtb >> armbianEnv.txt
     ```
-1. Disable unnecessary hardware features by copying `etc/modprobe.d/sunxi.conf` to `etc/modprobe.d/` ([reduces system load](https://forum.armbian.com/topic/7575-k-worker-problem-on-a20-based-boards/))
-2. (Optional -- see below) Build a new r8188eu WiFI drive (reduces system load further and improves WiFi stability) 
-3. Reboot
-
-You can also login with a keyboard and HDMI display and manually setup the WiFi.
+1. Disable unnecessary hardware features by copying `etc/modprobe.d/sunxi.conf` to `etc/modprobe.d/` ([reduces system load](https://forum.armbian.com/topic/7575-k-worker-problem-on-a20-based-boards/)) then run
+   ```
+   update-initramfs -u
+   ```
+1. (Optional -- see below) Build a new r8188eu WiFI driver (reduces system load further and improves WiFi stability) 
+1. Reboot
 
 # Notes
 
@@ -41,11 +53,34 @@ dtc -I dts -O dtb -o sun7i-a20-mini-xplus.dtb dts.tmp
 * Cubian for the Cubieboard2 also works, but is outdated (you'll have to use a custom fex file to get the USB port working). It does support NAND installation though.
 * Recent ArchLinux ARM versions don't seem to work (no HDMI output). Messing with the boot.scr file seems to be necessary.
 
-# Issues
+# WiFi driver
 
-Everything should work, but RTL8188EU WiFi driver seems to be unstable (when there's no traffic it disconnects). If you keep pinging your router then it should be okay though (e.g. leave `ping 192.168.1.1` running on another terminal).
+The default RTL8188EU WiFi driver is very unstable and causes a high system load (probably from the `RTW_CMD_THREAD` kernel thread). I've also experienced an issue where it stopped working even after a fresh install. The fix is to install one of the several alternate drivers, such as [this one](https://github.com/aircrack-ng/rtl8188eus).
 
-[Alternative wifi drivers](https://github.com/lwfinger/rtl8188eu) may also help.
+If you don't have working WiFi on your device then you'll have to somehow install some packages on your Armbian device (build environment, headers and the driver sources). My preferred way is to mount the Armbian installation SD card and `chroot` into it with QEMU, like this:
+
+```bash
+sudo apt install qemu-user-static
+<mount SD card>
+sudo cp /usr/bin/qemu-arm-static sdcard/usr/bin
+
+# set up virtual filesystems
+sudo mount -t proc /proc proc/
+sudo mount --rbind /sys sys/
+sudo mount --rbind /dev dev/
+
+sudo chroot sdcard/ qemu-arm-static /bin/bash
+
+# now in chroot
+<download files>
+exit
+
+# umount
+sudo umount -lf sdcard/
+sudo umount sdcard
+```
+
+Then boot from the SD card and compile and install the driver. Make sure to blacklist the old driver.
 
 # Watchdog timer
 
@@ -70,9 +105,6 @@ To enable the watchdog timer (e.g. to reboot when things freeze or the network g
 
 # Todo
 * Cedrus hardware acceleration (e.g. for ffmpeg)
-* Test support for integrated microphone
-* WiFi stabilization
-* Figure out why system load is high
 
 # References
 * https://docs.jethome.ru/en/controllers/linux/howto/watchdog.html
