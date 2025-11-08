@@ -40,15 +40,27 @@ Run the following on your device as root:
 1. (Optional -- see below) Build a new r8188eu WiFI driver (reduces system load further and improves WiFi stability) 
 1. Reboot
 
-# Notes
+# Build notes
 
 * The DTS file is based on the sun4i-a10-mini-xplus.dts and [sun7i-a20-mk808c.dts](https://github.com/torvalds/linux/blob/master/arch/arm/boot/dts/allwinner/sun7i-a20-mk808c.dts) from the mainline kernel, with some modifications. 
 * The DTB file was generated from the root of the kernel source tree using:
 
-```sh
-cp sun7i-a20-mini-xplus.dts arch/arm/boot/dts/
-cpp -nostdinc -I include -I arch  -undef -x assembler-with-cpp  arch/arm/boot/dts/sun7i-a20-mini-xplus.dts dts.tmp
-dtc -I dts -O dtb -o sun7i-a20-mini-xplus.dtb dts.tmp
+```bash
+KERNEL_PATH=/tmp/linux-6.12.57
+
+sudo apt-get install flex bison build-essential
+
+# assumes DTS is in current directory
+cp sun7i-a20-xmd.dts $KERNEL_PATH/arch/arm/boot/dts/allwinner/
+
+# build
+cd $KERNEL_PATH
+make ARCH=arm defconfig
+make ARCH=arm allwinner/sun7i-a20-xmd.dtb DTC_FLAGS="-@" -j2
+
+# copy DTB
+cd -
+cp $KERNEL_PATH/arch/arm/boot/dts/allwinner/sun7i-a20-xmd.dtb .
 ```
 * Cubian for the Cubieboard2 also works, but is outdated (you'll have to use a custom fex file to get the USB port working). It does support NAND installation though.
 * Recent ArchLinux ARM versions don't seem to work (no HDMI output). Messing with the boot.scr file seems to be necessary.
