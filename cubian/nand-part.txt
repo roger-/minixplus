@@ -1,0 +1,35 @@
+check partition table copy 0: mbr: version 0x00000200, magic softw411
+magic softw411 is not softw311
+check partition table copy 1: mbr: version 0x00000000, magic         
+magic          is not softw311
+check partition table copy 2: mbr: version 0x00000000, magic         
+magic          is not softw311
+check partition table copy 3: mbr: version 0x00000000, magic         
+magic          is not softw311
+all partition tables are bad!
+check partition table copy 0: mbr: version 0x00000200, magic softw411
+OK
+check partition table copy 1: mbr: version 0x00000200, magic softw411
+OK
+check partition table copy 2: mbr: version 0x00000200, magic softw411
+OK
+check partition table copy 3: mbr: version 0x00000200, magic softw411
+OK
+mbr: version 0x00000200, magic softw411
+3 partitions
+partition  1: class =         DISK, name =   bootloader, partition start =    32768, partition size =     2048 user_type=0
+partition  2: class =         DISK, name =         boot, partition start =    34816, partition size =      512 user_type=0
+partition  3: class =         DISK, name =        linux, partition start =    35328, partition size =        0 user_type=0
+check partition table copy 0: mbr: version 0x00000200, magic softw411
+OK
+check partition table copy 1: mbr: version 0x00000200, magic softw411
+OK
+check partition table copy 2: mbr: version 0x00000200, magic softw411
+OK
+check partition table copy 3: mbr: version 0x00000200, magic softw411
+OK
+mbr: version 0x00000200, magic softw411
+3 partitions
+partition  1: class =         DISK, name =   bootloader, partition start =    32768, partition size =     2048 user_type=0
+partition  2: class =         DISK, name =         boot, partition start =    34816, partition size =      512 user_type=0
+partition  3: class =         DISK, name =        linux, partition start =    35328, partition size =        0 user_type=0
