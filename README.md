@@ -16,7 +16,7 @@ Run the following as root (`su root`):
     cd <mount directory>/boot/
     cp armbian_first_run.txt.template armbian_first_run.txt
     ```
-1. Edit `armbian_first_run.txt` and set `FR_net_wifi_enabled=1` and `FR_net_wifi_ssid` and `FR_net_wifi_key` appropriately
+1. Edit `armbian_first_run.txt` and set `FR_net_wifi_enabled=1` and `FR_net_wifi_ssid` and `FR_net_wifi_key` appropriately. Note: modern Armbian uses [this file](https://docs.armbian.com/User-Guide_Autoconfig/).
 1. Unmount the SD card, place in your device and wait for it to show up on your network
 1. Log in via SSH with `root`/`1234` and create a new account
 
