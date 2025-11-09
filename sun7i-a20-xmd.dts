@@ -1,0 +1,198 @@
+/dts-v1/;
+#include "sun7i-a20.dtsi"
+#include "sunxi-common-regulators.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+
+/* XMD A20 V1.1 board */
+ / {
+	model = "XMD A20 (Mini-X clone)";
+	compatible = "xmd,a20-mini-x", "allwinner,sun7i-a20";
+
+	aliases { serial0 = &uart0; };
+	chosen  { stdout-path = "serial0:115200n8"; };
+
+	/* Blue LED on PH20 configured for heartbeat */
+	leds {
+		compatible = "gpio-leds";
+		led0: power {
+			label = "xmd:blue:power";
+			gpios = <&pio 7 20 GPIO_ACTIVE_HIGH>; /* PH20 */
+			linux,default-trigger = "heartbeat";
+		};
+	};
+
+	/* microSD card regulator (3.3V) */
+	reg_sd_vcc: mmc0-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "mmc0-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+	};
+
+	/* HDMI connector node for DRM display pipeline */
+	hdmi-connector {
+		compatible = "hdmi-connector";
+		type = "a";
+		port {
+			hdmi_con_in: endpoint {
+				remote-endpoint = <&hdmi_out_con>;
+			};
+		};
+	};
+
+	/* HDMI audio via simple-audio-card: I2S0 <-> HDMI */
+	hdmi_sound: hdmi-sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,name   = "HDMI-Audio";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,bitclock-master = <&hdmi_cpu>;
+		simple-audio-card,frame-master    = <&hdmi_cpu>;
+		hdmi_cpu: simple-audio-card,cpu { sound-dai = <&i2s0>; };
+		simple-audio-card,codec         { sound-dai = <&hdmi>; };
+	};
+};
+
+/* UART console */
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_pb_pins>;
+	status = "okay";
+};
+
+/* microSD card (MMC0) with card detect on PH1 */
+&mmc0 {
+	bus-width = <4>;
+	cd-gpios = <&pio 7 1 GPIO_ACTIVE_LOW>; /* PH1 */
+	vmmc-supply = <&reg_sd_vcc>;
+	status = "okay";
+};
+
+/* IR receivers not present */
+&ir0 { status = "disabled"; };
+&ir1 { status = "disabled"; };
+
+/* Display engine and HDMI */
+&de    { status = "okay"; };
+&tcon1 { status = "okay"; };
+
+&hdmi {
+	status = "okay";
+	#sound-dai-cells = <0>;  /* Expose HDMI as audio DAI */
+	allwinner,force-hpd;
+	monitor-dvi;
+};
+
+/* Connect HDMI output to connector node */
+&hdmi_out {
+	hdmi_out_con: endpoint {
+		remote-endpoint = <&hdmi_con_in>;
+	};
+};
+
+/* HDMI audio interface */
+&i2s0 { status = "okay"; };
+
+/* USB PHY configuration */
+&usbphy {
+	status = "okay";
+	/* OTG port ID and VBUS detection GPIOs */
+	usb0_id_det-gpios   = <&pio 7 4 GPIO_ACTIVE_HIGH>; /* PH4 */
+	usb0_vbus_det-gpios = <&pio 7 5 GPIO_ACTIVE_HIGH>; /* PH5 */
+	/* VBUS power supplies for each PHY */
+	usb0_vbus-supply = <&reg_usb0_vbus>;
+	usb1_vbus-supply = <&reg_usb1_vbus>;
+	usb2_vbus-supply = <&reg_usb2_vbus>;
+};
+
+/* OTG port configured as USB host */
+&usb_otg {
+	status = "okay";
+	dr_mode = "host";
+	vbus-supply = <&reg_usb0_vbus>;
+	vcc-supply  = <&reg_usb0_vbus>;
+};
+
+/* USB host controllers (EHCI/OHCI pairs) */
+&ehci0 { status = "okay"; };
+&ohci0 { status = "okay"; };
+&ehci1 { status = "okay"; };
+&ohci1 { status = "okay"; };
+
+/* Temperature sensor for thermal management */
+&rtp { status = "okay"; };
+
+/* NAND flash with read-only partitions */
+&nfc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&nand_pins_a>, <&nand_cs0_pins_a>, <&nand_rb0_pins_a>;
+	status = "okay";
+
+	nand@0 {
+		reg = <0>;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		allwinner,rb = <0>;
+		nand-ecc-mode = "hw";
+
+		/* Bootloader partition */
+		bootloader@1000000 {
+			label = "bootloader";
+			reg = /bits/ 64 <0x01000000 0x00100000>;
+			read-only;
+		};
+		/* Boot environment partition */
+		boot@1100000 {
+			label = "boot";
+			reg = /bits/ 64 <0x01100000 0x00040000>;
+			read-only;
+		};
+		/* Kernel and root filesystem partition */
+		linux@1140000 {
+			label = "linux";
+			reg = /bits/ 64 <0x01140000 0>;
+			read-only;
+		};
+	};
+};
+
+/* PIO bank voltage supplies */
+&pio {
+	vcc-pb-supply = <&reg_vcc3v3>;
+	vcc-pf-supply = <&reg_vcc3v3>;
+	vcc-ph-supply = <&reg_vcc3v3>;
+	vcc-pi-supply = <&reg_vcc3v3>;
+
+	/* NAND pin configurations */
+	nand_pins_a: nand-base0 {
+		pins = "PC0", "PC1", "PC2", "PC5",
+		       "PC8", "PC9", "PC10", "PC11",
+		       "PC12", "PC13", "PC14", "PC15", "PC16";
+		function = "nand0";
+		drive-strength = <10>;
+		bias-disable;
+	};
+	nand_cs0_pins_a: nand-cs {
+		pins = "PC4";
+		function = "nand0";
+		drive-strength = <10>;
+		bias-disable;
+	};
+	nand_rb0_pins_a: nand-rb {
+		pins = "PC6";
+		function = "nand0";
+		drive-strength = <10>;
+		bias-disable;
+	};
+};
+
+/* On-chip audio codec */
+&codec { status = "okay"; };
+
+/* OTG SRAM required by MUSB controller in host mode */
+&otg_sram { status = "okay"; };
+
+/* Enable USB VBUS regulators from sunxi-common-regulators */
+&reg_usb0_vbus { status = "okay"; };
+&reg_usb1_vbus { status = "okay"; };
+&reg_usb2_vbus { status = "okay"; };
