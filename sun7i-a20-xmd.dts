@@ -2,18 +2,28 @@
 #include "sun7i-a20.dtsi"
 #include "sunxi-common-regulators.dtsi"
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
 
-/* XMD A20 V1.1 board */
- / {
+/*
+ * XMD A20 V1.1 Board (Mini-X clone)
+ * Allwinner sun7i-a20 dual-core Cortex-A7 SoC
+ */
+
+/ {
 	model = "XMD A20 (Mini-X clone)";
 	compatible = "xmd,a20-mini-x", "allwinner,sun7i-a20";
 
-	aliases { serial0 = &uart0; };
-	chosen  { stdout-path = "serial0:115200n8"; };
+	aliases {
+		serial0 = &uart0;
+	};
 
-	/* Blue LED on PH20 configured for heartbeat */
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
 	leds {
 		compatible = "gpio-leds";
+
 		led0: power {
 			label = "xmd:blue:power";
 			gpios = <&pio 7 20 GPIO_ACTIVE_HIGH>; /* PH20 */
@@ -21,7 +31,7 @@
 		};
 	};
 
-	/* microSD card regulator (3.3V) */
+	/* microSD card 3.3V regulator */
 	reg_sd_vcc: mmc0-3v3 {
 		compatible = "regulator-fixed";
 		regulator-name = "mmc0-3v3";
@@ -30,76 +40,104 @@
 		regulator-boot-on;
 	};
 
-	/* HDMI connector node for DRM display pipeline */
+	/* HDMI connector for display output */
 	hdmi-connector {
 		compatible = "hdmi-connector";
 		type = "a";
+
 		port {
 			hdmi_con_in: endpoint {
 				remote-endpoint = <&hdmi_out_con>;
 			};
 		};
 	};
-
-	/* HDMI audio via simple-audio-card: I2S0 <-> HDMI */
-	hdmi_sound: hdmi-sound {
-		compatible = "simple-audio-card";
-		simple-audio-card,name   = "HDMI-Audio";
-		simple-audio-card,format = "i2s";
-		simple-audio-card,bitclock-master = <&hdmi_cpu>;
-		simple-audio-card,frame-master    = <&hdmi_cpu>;
-		hdmi_cpu: simple-audio-card,cpu { sound-dai = <&i2s0>; };
-		simple-audio-card,codec         { sound-dai = <&hdmi>; };
-	};
 };
 
-/* UART console */
+/*
+ * Serial Console (UART0 on PB22/PB23)
+ */
 &uart0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart0_pb_pins>;
 	status = "okay";
 };
 
-/* microSD card (MMC0) with card detect on PH1 */
+/*
+ * microSD Card Slot (MMC0)
+ */
 &mmc0 {
 	bus-width = <4>;
-	cd-gpios = <&pio 7 1 GPIO_ACTIVE_LOW>; /* PH1 */
+	cd-gpios = <&pio 7 1 GPIO_ACTIVE_LOW>; /* Card detect: PH1 */
 	vmmc-supply = <&reg_sd_vcc>;
 	status = "okay";
 };
 
-/* IR receivers not present */
-&ir0 { status = "disabled"; };
-&ir1 { status = "disabled"; };
+/*
+ * Disabled Peripherals
+ */
+&gmac { status = "disabled"; };  /* Ethernet controller not present */
+&ir0  { status = "disabled"; };  /* IR receiver not present */
+&ir1  { status = "disabled"; };  /* IR receiver not present */
 
-/* Display engine and HDMI */
+/*
+ * Display Pipeline (HDMI Output)
+ */
 &de    { status = "okay"; };
 &tcon1 { status = "okay"; };
 
 &hdmi {
 	status = "okay";
-	#sound-dai-cells = <0>;  /* Expose HDMI as audio DAI */
-	allwinner,force-hpd;
-	monitor-dvi;
+	allwinner,force-hpd;  /* Force hotplug detection */
 };
 
-/* Connect HDMI output to connector node */
 &hdmi_out {
 	hdmi_out_con: endpoint {
 		remote-endpoint = <&hdmi_con_in>;
 	};
 };
 
-/* HDMI audio interface */
-&i2s0 { status = "okay"; };
+/*
+ * I2C Buses
+ */
 
-/* USB PHY configuration */
+/* I2C0 with AXP209 PMIC at address 0x34 */
+&i2c0 {
+	status = "okay";
+
+	axp209: pmic@34 {
+		reg = <0x34>;
+		interrupt-parent = <&nmi_intc>;
+		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
+	};
+};
+
+/* I2C1 for future peripherals */
+&i2c1 { status = "okay"; };
+
+/* I2C2 for additional peripherals */
+&i2c2 { status = "okay"; };
+
+/*
+ * Graphics and Video
+ */
+
+/* Mali-400 GPU for 3D graphics acceleration */
+&mali { status = "okay"; };
+
+/* Note: Video Engine (VE) hardware decoder/encoder exists at 0x01c0e000
+ * but cannot be enabled via DTS (no label in sun7i-a20.dtsi).
+ * Kernel driver will probe it automatically if CONFIG_VIDEO_SUNXI_CEDRUS is enabled.
+ */
+
+/*
+ * USB Configuration
+ */
 &usbphy {
 	status = "okay";
 	/* OTG port ID and VBUS detection GPIOs */
 	usb0_id_det-gpios   = <&pio 7 4 GPIO_ACTIVE_HIGH>; /* PH4 */
 	usb0_vbus_det-gpios = <&pio 7 5 GPIO_ACTIVE_HIGH>; /* PH5 */
-	/* VBUS power supplies for each PHY */
+	/* VBUS power supplies for each USB PHY */
 	usb0_vbus-supply = <&reg_usb0_vbus>;
 	usb1_vbus-supply = <&reg_usb1_vbus>;
 	usb2_vbus-supply = <&reg_usb2_vbus>;
@@ -119,10 +157,15 @@
 &ehci1 { status = "okay"; };
 &ohci1 { status = "okay"; };
 
-/* Temperature sensor for thermal management */
+/*
+ * Temperature Sensor
+ */
 &rtp { status = "okay"; };
 
-/* NAND flash with read-only partitions */
+/*
+ * NAND Flash (Hardware ECC)
+ * Note: Requires CONFIG_MTD_NAND_ECC_SW_BCH=y for soft_bch mode
+ */
 &nfc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&nand_pins_a>, <&nand_cs0_pins_a>, <&nand_rb0_pins_a>;
@@ -134,20 +177,25 @@
 		#size-cells = <2>;
 		allwinner,rb = <0>;
 		nand-ecc-mode = "hw";
+		nand-ecc-step-size = <1024>;
+		nand-ecc-strength = <24>;
+		nand-on-flash-bbt;
 
-		/* Bootloader partition */
+		/* Bootloader partition (1MB at offset 16MB) */
 		bootloader@1000000 {
 			label = "bootloader";
 			reg = /bits/ 64 <0x01000000 0x00100000>;
 			read-only;
 		};
-		/* Boot environment partition */
+
+		/* Boot environment partition (256KB) */
 		boot@1100000 {
 			label = "boot";
 			reg = /bits/ 64 <0x01100000 0x00040000>;
 			read-only;
 		};
-		/* Kernel and root filesystem partition */
+
+		/* Kernel and root filesystem (remaining space) */
 		linux@1140000 {
 			label = "linux";
 			reg = /bits/ 64 <0x01140000 0>;
@@ -156,14 +204,18 @@
 	};
 };
 
-/* PIO bank voltage supplies */
+/*
+ * GPIO Pin Configuration
+ */
 &pio {
+	/* PIO bank voltage supplies */
 	vcc-pb-supply = <&reg_vcc3v3>;
+	vcc-pc-supply = <&reg_vcc3v3>;
 	vcc-pf-supply = <&reg_vcc3v3>;
 	vcc-ph-supply = <&reg_vcc3v3>;
 	vcc-pi-supply = <&reg_vcc3v3>;
 
-	/* NAND pin configurations */
+	/* NAND flash pin configurations */
 	nand_pins_a: nand-base0 {
 		pins = "PC0", "PC1", "PC2", "PC5",
 		       "PC8", "PC9", "PC10", "PC11",
@@ -172,12 +224,14 @@
 		drive-strength = <10>;
 		bias-disable;
 	};
+
 	nand_cs0_pins_a: nand-cs {
 		pins = "PC4";
 		function = "nand0";
 		drive-strength = <10>;
 		bias-disable;
 	};
+
 	nand_rb0_pins_a: nand-rb {
 		pins = "PC6";
 		function = "nand0";
@@ -186,13 +240,64 @@
 	};
 };
 
-/* On-chip audio codec */
+/*
+ * On-chip Audio Codec
+ */
 &codec { status = "okay"; };
 
-/* OTG SRAM required by MUSB controller in host mode */
+/*
+ * OTG SRAM (required by MUSB controller in host mode)
+ */
 &otg_sram { status = "okay"; };
 
-/* Enable USB VBUS regulators from sunxi-common-regulators */
+/*
+ * USB VBUS Regulators (from sunxi-common-regulators.dtsi)
+ */
 &reg_usb0_vbus { status = "okay"; };
 &reg_usb1_vbus { status = "okay"; };
 &reg_usb2_vbus { status = "okay"; };
+
+/*
+ * AXP209 PMIC Configuration
+ */
+#include "axp209.dtsi"
+
+&ac_power_supply { status = "okay"; };
+
+/* DCDC2: CPU core voltage (1.0-1.45V) */
+&reg_dcdc2 {
+	regulator-always-on;
+	regulator-min-microvolt = <1000000>;
+	regulator-max-microvolt = <1450000>;
+	regulator-name = "vdd-cpu";
+};
+
+/* DCDC3: Internal/DDR voltage (1.0-1.4V) */
+&reg_dcdc3 {
+	regulator-always-on;
+	regulator-min-microvolt = <1000000>;
+	regulator-max-microvolt = <1400000>;
+	regulator-name = "vdd-int-dll";
+};
+
+/* LDO1: RTC voltage */
+&reg_ldo1 {
+	regulator-name = "vdd-rtc";
+};
+
+/* LDO2: Analog voltage (3.0V) */
+&reg_ldo2 {
+	regulator-always-on;
+	regulator-min-microvolt = <3000000>;
+	regulator-max-microvolt = <3000000>;
+	regulator-name = "avcc";
+};
+
+/*
+ * CPU Voltage Supply (for DVFS support)
+ * Thermal throttling at 75°C, critical shutdown at 100°C (from sun7i-a20.dtsi)
+ * Default operating points: 960/912/864/720/528/312/144 MHz with voltage scaling
+ */
+&cpu0 {
+	cpu-supply = <&reg_dcdc2>;
+};
